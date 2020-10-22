@@ -1,0 +1,156 @@
+{
+    "executionRoleArn": "arn:aws:iam::{{ACCOUNT_ID}}:role/ecsTaskExecutionRole",
+    "containerDefinitions": [
+        {
+            "logConfiguration": {
+                "logDriver": "awslogs",
+                "options": {
+                    "awslogs-group": "/ecs/greeter_server",
+                    "awslogs-region": "us-east-1",
+                    "awslogs-stream-prefix": "ecs"
+                }
+            },
+            "portMappings": [
+                {
+                    "hostPort": 50051,
+                    "protocol": "tcp",
+                    "containerPort": 50051
+                }
+            ],
+            "cpu": 0,
+            "memoryReservation": 128,
+            "image": "buzzsurfr/greeter_server:blog",
+            "dependsOn": [
+                {
+                    "containerName": "envoy",
+                    "condition": "HEALTHY"
+                }
+            ],
+            "essential": true,
+            "name": "greeter_server"
+        },
+        {
+            "logConfiguration": {
+                "logDriver": "awslogs",
+                "options": {
+                    "awslogs-group": "/ecs/greeter_server",
+                    "awslogs-region": "us-east-1",
+                    "awslogs-stream-prefix": "ecs"
+                }
+            },
+            "cpu": 0,
+            "environment": [
+                {
+                    "name": "APPMESH_VIRTUAL_NODE_NAME",
+                    "value": "mesh/greeter/virtualNode/greeter-v1"
+                }
+            ],
+            "mountPoints": [
+                {
+                    "sourceVolume": "certificates",
+                    "containerPath": "/cert",
+                    "readOnly": true
+                }
+            ],
+            "memory": 500,
+            "image": "840364872350.dkr.ecr.us-east-1.amazonaws.com/aws-appmesh-envoy:v1.15.0.0-prod",
+            "dependsOn": [
+                {
+                    "containerName": "cert-seeder",
+                    "condition": "COMPLETE"
+                }
+            ],
+            "healthCheck": {
+                "retries": 3,
+                "command": [
+                    "CMD-SHELL",
+                    "curl -s http://localhost:9901/server_info | grep state | grep -q LIVE"
+                ],
+                "timeout": 2,
+                "interval": 5,
+                "startPeriod": 10
+            },
+            "essential": true,
+            "user": "1337",
+            "name": "envoy",
+        },
+        {
+            "name": "cert-seeder",
+            "image": "buzzsurfr/cert-seeder:v0.1-python3",
+            "memoryReservation": "16",
+            "essential": false,
+            "environment": [
+                {
+                    "name": "CHAIN_S3URI",
+                    "value": "s3://mycertificates/greeter_server/chain.pem"
+                },
+                {
+                    "name": "KEY_S3URI",
+                    "value": "s3://mycertificates/greeter_server/key.pem"
+                },
+                {
+                    "name": "OUTPUT_DIR",
+                    "value": "/tmp/certificates"
+                }
+            ],
+            "user": "1337",
+            "mountPoints": [
+                {
+                    "sourceVolume": "certificates",
+                    "containerPath": "/tmp/certificates",
+                    "readOnly": ""
+                }
+            ]
+        }
+    ],
+    "memory": "512",
+    "taskRoleArn": "arn:aws:iam::{{ACCOUNT_ID}}:role/AppMeshEnvoyTaskRole",
+    "family": "greeter_server",
+    "pidMode": null,
+    "requiresCompatibilities": [
+        "FARGATE"
+    ],
+    "networkMode": "awsvpc",
+    "cpu": "256",
+    "inferenceAccelerators": [],
+    "proxyConfiguration": {
+        "type": "APPMESH",
+        "containerName": "envoy",
+        "properties": [
+            {
+                "name": "ProxyIngressPort",
+                "value": "15000"
+            },
+            {
+                "name": "AppPorts",
+                "value": "50051"
+            },
+            {
+                "name": "EgressIgnoredIPs",
+                "value": "169.254.170.2,169.254.169.254"
+            },
+            {
+                "name": "IgnoredGID",
+                "value": ""
+            },
+            {
+                "name": "EgressIgnoredPorts",
+                "value": ""
+            },
+            {
+                "name": "IgnoredUID",
+                "value": "1337"
+            },
+            {
+                "name": "ProxyEgressPort",
+                "value": "15001"
+            }
+        ]
+    },
+    "volumes": [
+        {
+            "host": {},
+            "name": "certificates"
+        }
+    ]
+}
