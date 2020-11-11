@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -12,7 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/aws/aws-sdk-go/service/ssm"
-	"github.com/buzzsurfr/cert-seeder/internal/s3uri"
+	"github.com/buzzsurfr/seeder/internal/s3uri"
 )
 
 var (
@@ -75,18 +76,7 @@ func downloadFromS3Uri(sess *session.Session, location, filename string) error {
 	return downloadErr
 }
 
-func main() {
-	// Create output directory if it doesn't exist
-	if outputDirEnv, ok := os.LookupEnv("OUTPUT_DIR"); ok {
-		outputDir = outputDirEnv
-	}
-	_ = os.Mkdir(outputDir, os.ModeDir|0755)
-
-	// AWS Session
-	sess := session.Must(session.NewSessionWithOptions(session.Options{
-		SharedConfigState: session.SharedConfigEnable,
-	}))
-
+func poll(sess *session.Session) {
 	// Get certificate chain from SSM and store in file
 	if chainParameterStoreName, ok := os.LookupEnv("CHAIN_PARAMETER_STORE_NAME"); ok {
 		downloadFromParameterStore(sess, chainParameterStoreName, filepath.Join(outputDir, chainFilename))
@@ -106,5 +96,39 @@ func main() {
 	if keyS3Uri, ok := os.LookupEnv("KEY_S3URI"); ok {
 		downloadFromS3Uri(sess, keyS3Uri, filepath.Join(outputDir, keyFilename))
 	}
+}
 
+func run() {
+	// Timer
+	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
+
+	// AWS Session
+	sess := session.Must(session.NewSessionWithOptions(session.Options{
+		SharedConfigState: session.SharedConfigEnable,
+	}))
+
+	for {
+		select {
+		case <-ticker.C:
+			poll(sess)
+		}
+	}
+}
+
+func main() {
+	// Create output directory if it doesn't exist
+	if outputDirEnv, ok := os.LookupEnv("OUTPUT_DIR"); ok {
+		outputDir = outputDirEnv
+	}
+	_ = os.Mkdir(outputDir, os.ModeDir|0755)
+
+	// AWS Session
+	sess := session.Must(session.NewSessionWithOptions(session.Options{
+		SharedConfigState: session.SharedConfigEnable,
+	}))
+
+	poll(sess)
+
+	run()
 }
