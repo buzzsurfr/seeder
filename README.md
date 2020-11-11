@@ -1,29 +1,102 @@
-# seeder
-Certificate loader for Envoy local file hosting
+# cert-seeder (python3)
 
-## Sources
+**Author**: buzzsurfr (Theo Salvo)
 
-seeder downloads a certificate chain and private key for use locally.
+**PROVIDED AS-IS WITHOUT WARRANTY. SAMPLE NOT AFFILIATED WITH AMAZON IN ANY WAY.**
 
-seeder supports the following sources:
-* Amazon S3
-* AWS Systems Manager Parameter Store
+## Usage
 
-The certificate chain will be written to the file **chain.pem** and the private key will be written to the file **key.pem**. The default directory to write both files is `/tmp/certificates`, but can be changed by setting the `OUTPUT_DIR` parameter.
+### Environment variables
 
-### Certificate Chain
+* `CHAIN_S3URI`: The S3Uri to the certificate chain. For example, `s3://mycertificates/app/chain.pem`
+* `KEY_S3URI`: The S3Uri to the private key. For example, `s3://mycertificates/app/key.pem`
+* `OUTPUT_DIR`: The location to store the chain and key. Default: `/tmp/certificates`
 
-* `CHAIN_PARAMETER_STORE_NAME`: The name of the Parameter Store parameter with the certificate chain. For example, `/certificates/sample/chain`.
-* `CHAIN_S3URI`: The S3Uri of the certificate chain. For example: `s3://mybucket/certificate-path/chain.pem`.
+### Run as script
 
-### Private Key
+```
+python3 main.py
+```
 
-* `KEY_PARAMETER_STORE_NAME`: The name of the Parameter store parameters with the private key. For example, `/certificates/sample/key`.
-* `KEY_S3URI`: The S3Uri of the private key. For example: `s3://mybucket/certificate-path/key.pem`.
+### Build/run container
 
-## TO DO
+```
+docker build -t <tag> .
+docker run -e "CHAIN_S3URI=s3://mycertificates/app/chain.pem" -e "KEY_S3URI=s3://mycertificates/app/key.pem" <tag>
+```
 
-* Rename to `seeder`
-* Create a CLI called `plant` that _plants_ seeds into configurations.
-* Support a config file
-* Add a watcher
+This has been built and stored in [Docker Hub](https://hub.docker.com/repository/docker/buzzsurfr/cert-seeder) as `buzzsurfr/cert-seeder:v0.1-python3`.
+
+When testing locally, it may be necessary to provide `AWS_DEFAULT_REGION` as an environment variable and associate your credentials to the container. To do so using `us-east-1` as the region, run:
+
+```
+docker run -v ~/.aws:/root/aws -e "AWS_DEFAULT_REGION=us-east-1" -e "CHAIN_S3URI=s3://mycertificates/app/chain.pem" -e "KEY_S3URI=s3://mycertificates/app/key.pem" <tag>
+```
+
+### Add to Envoy container in ECS Task Definition
+
+A sample task definition is provided at [ecs-task-definition.json](ecs-task-definition.json).
+
+#### Steps
+
+1. Add a volume to your task definiton.
+
+    ```json
+    "volumes": [
+        {
+            "host": {},
+            "name": "certificates"
+        }
+    ]
+    ```
+
+1. Add a new container definition for the **cert-seeder**. Note that the **mountPoint** for our created volume matches the `OUTPUT_DIR` environment variable. This does not need to match in the App Mesh Virtual Node configuration or the Envoy container configuration. The user `1337` is so that Envoy ignores this container for proxy (which it shouldn't see anyways).,
+
+    ```json
+    {
+        "name": "cert-seeder",
+        "image": "buzzsurfr/cert-seeder:v0.1-python3",
+        "memoryReservation": "16",
+        "essential": false,
+        "environment": [
+            {
+                "name": "CHAIN_S3URI",
+                "value": "s3://mycertificates/greeter_server/chain.pem"
+            },
+            {
+                "name": "KEY_S3URI",
+                "value": "s3://mycertificates/greeter_server/key.pem"
+            },
+            {
+                "name": "OUTPUT_DIR",
+                "value": "/tmp/certificates"
+            }
+        ],
+        "user": "1337",
+        "mountPoints": [
+            {
+                "sourceVolume": "certificates",
+                "containerPath": "/tmp/certificates",
+                "readOnly": ""
+            }
+        ]
+    }
+    ```
+
+1. Modify the **envoy** container definition adding the volume and setting a dependency on the **cert-seeder** container. The **containerPath** used here should match the **Local file hosting** path in the App Mesh Virtual Node configuration.
+
+    ```json
+    "mountPoints": [
+        {
+            "sourceVolume": "certificates",
+            "containerPath": "/cert",
+            "readOnly": true
+        }
+    ],
+    "dependsOn": [
+        {
+            "containerName": "cert-seeder",
+            "condition": "COMPLETE"
+        }
+    ]
+    ```
