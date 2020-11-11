@@ -25,9 +25,10 @@ import (
 // versionCmd represents the version command
 var (
 	shortened  = false
-	version    = "dev"
+	release    = "dev"
 	commit     = "none"
 	date       = "unknown"
+	output     = "json"
 	versionCmd = &cobra.Command{
 		Use:   "version",
 		Short: "Version will output the current build information",
@@ -48,17 +49,12 @@ func init() {
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 	// versionCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	versionCmd.Flags().BoolVarP(&shortened, "short", "s", false, "Print just the version number.")
+	versionCmd.Flags().StringVarP(&output, "output", "o", "json", "Output format. One of 'yaml' or 'json'.")
 }
 
 func version(_ *cobra.Command, _ []string) {
-	var response string
-	versionOutput := goVersion.New(version, commit, date)
-
-	if shortened {
-		response = versionOutput.ToShortened()
-	} else {
-		response = versionOutput.ToJSON()
-	}
-	fmt.Printf("%+v", response)
+	response := goVersion.FuncWithOutput(shortened, release, commit, date, output)
+	fmt.Print(response)
 	return
 }
