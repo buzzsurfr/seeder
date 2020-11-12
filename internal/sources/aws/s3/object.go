@@ -2,7 +2,7 @@ package s3
 
 import (
 	"fmt"
-	"strings"
+	"io"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -13,7 +13,7 @@ import (
 type Object struct {
 	Bucket string
 	Key    string
-	r      strings.Reader
+	r      io.ReadCloser
 }
 
 func NewObject(sess *session.Session, location string) *Object {

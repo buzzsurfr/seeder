@@ -2,6 +2,8 @@ package ssm
 
 import (
 	"fmt"
+	"io"
+	"io/ioutil"
 	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -13,7 +15,7 @@ import (
 type Parameter struct {
 	Name  string
 	Value string
-	r     strings.Reader
+	r     io.ReadCloser
 }
 
 func NewParameter(sess *session.Session, name string) *Parameter {
@@ -44,7 +46,7 @@ func NewParameter(sess *session.Session, name string) *Parameter {
 	return &Parameter{
 		Name:  name,
 		Value: aws.StringValue(result.Parameter.Value),
-		r:     strings.NewReader(aws.StringValue(result.Parameter.Value)),
+		r:     ioutil.NopCloser(strings.NewReader(aws.StringValue(result.Parameter.Value))),
 	}
 }
 

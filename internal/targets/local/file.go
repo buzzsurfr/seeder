@@ -9,7 +9,7 @@ import (
 type File struct {
 	Path string
 	Name string
-	w    io.Writer
+	w    io.WriteCloser
 }
 
 func NewFile(path, name string) *File {
