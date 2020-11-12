@@ -85,6 +85,10 @@ func initConfig() {
 		viper.SetConfigName(".seeder")
 	}
 
+	// Defaults
+	viper.SetTypeByDefaultValue(true)
+	viper.SetDefault("default.target.path", "/var/seeder")
+
 	viper.AutomaticEnv() // read in environment variables that match
 
 	// If a config file is found, read it in.
