@@ -19,7 +19,7 @@ If the parameter is stored as a _SecureString_ (encrypted), it will be decrypted
 
 Parameter seeds require the `ssm:GetParameter` permission, optionally specifying the parameter ARN as a resource.
 
-If the parameter is stored as a _SecureStrin_ (encrypted), then you must also have the `kms:Decrypt` permission for the key used by the parameter, optionally specifying the key ARN as a resource. If you do not have the IAM permissions, you can optionally add the IAM user/role for seeder to the key policy for the key.
+If the parameter is stored as a _SecureString_ (encrypted), then you must also have the `kms:Decrypt` permission for the key used by the parameter, optionally specifying the key ARN as a resource. If you do not have the IAM permissions, you can optionally add the IAM user/role for seeder to the key policy for the key.
 
 ### Amazon S3
 
