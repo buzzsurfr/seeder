@@ -18,6 +18,10 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/buzzsurfr/seeder/internal"
+	"github.com/buzzsurfr/seeder/internal/sources/aws/ssm"
+	"github.com/buzzsurfr/seeder/internal/targets/local"
 	"github.com/spf13/cobra"
 )
 
@@ -31,9 +35,7 @@ and usage of using your command. For example:
 Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("check called")
-	},
+	Run: check,
 }
 
 func init() {
@@ -48,4 +50,24 @@ func init() {
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 	// checkCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+}
+
+func check(cmd *cobra.Command, args []string) {
+	fmt.Println("check called")
+
+	// AWS Session
+	sess := session.Must(session.NewSessionWithOptions(session.Options{
+		SharedConfigState: session.SharedConfigEnable,
+	}))
+
+	// Load seeds from config
+	src := ssm.NewParameter(sess, "/certificates/greeter_server/chain")
+	tar := local.NewFile("/Users/salvot/Code/seeder", "chain.pem")
+	s := internal.NewSeed("test", src, tar)
+
+	// Copy seeds from sources to targets
+	s.Copy()
+
+	// Close source and target
+	s.Close()
 }
