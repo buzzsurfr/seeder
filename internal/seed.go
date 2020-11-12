@@ -26,6 +26,8 @@ func (s *Seed) Close() error {
 	s.source.Close()
 	s.target.Close()
 	s.closed = true
+
+	return nil
 }
 
 type Seeds []Seed
