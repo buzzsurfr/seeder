@@ -1,4 +1,4 @@
-package s3uri
+package s3
 
 import (
 	"errors"
@@ -12,6 +12,8 @@ import (
 // cannot be determined, for example when the s3:// schema is used or when
 // path style URL has been given without the region component in the
 // fully-qualified domain name.
+//
+// Based on https://gist.github.com/kwilczynski/f6e626990d6d2395b42a12721b165b86#file-main-go
 const DefaultRegion = "us-east-1"
 
 var (
