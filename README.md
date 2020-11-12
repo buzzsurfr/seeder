@@ -6,8 +6,8 @@ The basic unit of seeder is a **seed**, which contains a source and target, then
 ## Sources
 
 seeder supports the following sources:
-* AWS Systems Manager Parameter Store
-* Amazon S3
+* [AWS Systems Manager Parameter Store](#aws-systems-manager-parameter-store)
+* [Amazon S3](#amazon-s3)
 
 ### AWS Systems Manager Parameter Store
 
@@ -32,7 +32,7 @@ Object seeds require the `s3:GetObject` permission, optionally specifying the bu
 ## Targets
 
 seeder supports the following targets:
-* Local File
+* [Local File](#local-file)
 
 ### Local File
 
