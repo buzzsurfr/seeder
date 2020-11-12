@@ -31,3 +31,11 @@ func NewFile(path, name string) *File {
 		w:    f,
 	}
 }
+
+func (f *File) Write(p []byte) (n int, err error) {
+	return f.w.Write(p)
+}
+
+func (f *File) Close() error {
+	return f.w.Close()
+}

@@ -57,3 +57,7 @@ func NewObject(sess *session.Session, location string) *Object {
 func (obj *Object) Read(b []byte) (int, error) {
 	return obj.r.Read(b)
 }
+
+func (obj *Object) Close() error {
+	return obj.r.Close()
+}

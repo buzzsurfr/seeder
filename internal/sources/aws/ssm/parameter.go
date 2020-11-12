@@ -53,3 +53,7 @@ func NewParameter(sess *session.Session, name string) *Parameter {
 func (param *Parameter) Read(b []byte) (int, error) {
 	return param.r.Read(b)
 }
+
+func (param *Parameter) Close() error {
+	return param.r.Close()
+}
