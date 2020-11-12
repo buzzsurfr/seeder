@@ -1,29 +1,73 @@
 # seeder
-Certificate loader for Envoy local file hosting
+blog loader for local file hosting
+
+The basic unit of seeder is a **seed**, which contains a source and target, then creates the pipe between them. The different sources and targets are setup in packages to support growth later.
 
 ## Sources
 
-seeder downloads a certificate chain and private key for use locally.
-
 seeder supports the following sources:
-* Amazon S3
 * AWS Systems Manager Parameter Store
+* Amazon S3
 
-The certificate chain will be written to the file **chain.pem** and the private key will be written to the file **key.pem**. The default directory to write both files is `/tmp/certificates`, but can be changed by setting the `OUTPUT_DIR` parameter.
+### AWS Systems Manager Parameter Store
 
-### Certificate Chain
+Seeds can be loaded from parameters stored in AWS Systems Manager Parameter Store by specifying the name of the parameter.
 
-* `CHAIN_PARAMETER_STORE_NAME`: The name of the Parameter Store parameter with the certificate chain. For example, `/certificates/sample/chain`.
-* `CHAIN_S3URI`: The S3Uri of the certificate chain. For example: `s3://mybucket/certificate-path/chain.pem`.
+If the parameter is stored as a _SecureString_ (encrypted), it will be decrypted using KMS.
 
-### Private Key
+#### Permissions
 
-* `KEY_PARAMETER_STORE_NAME`: The name of the Parameter store parameters with the private key. For example, `/certificates/sample/key`.
-* `KEY_S3URI`: The S3Uri of the private key. For example: `s3://mybucket/certificate-path/key.pem`.
+Parameter seeds require the `ssm:GetParameter` permission, optionally specifying the parameter ARN as a resource.
 
-## TO DO
+If the parameter is stored as a _SecureStrin_ (encrypted), then you must also have the `kms:Decrypt` permission for the key used by the parameter, optionally specifying the key ARN as a resource. If you do not have the IAM permissions, you can optionally add the IAM user/role for seeder to the key policy for the key.
 
-* Rename to `seeder`
-* Create a CLI called `plant` that _plants_ seeds into configurations.
-* Support a config file
-* Add a watcher
+### Amazon S3
+
+Seeds can be loaded from Amazon S3 by specifying the bucket and key as a S3 URI (similar to `aws s3` commands).
+
+#### Permissions
+
+Object seeds require the `s3:GetObject` permission, optionally specifying the bucket/key ARN as a resource. If you do not have the IAM permissions, you can optionally add the IAM user/role for seeder to the bucket policy for the bucket.
+
+## Targets
+
+seeder supports the following targets:
+* Local File
+
+### Local File
+
+Seeds can be stored locally as a file by specifying the path and file name. Optionally, set a default path to store all files from all seeds in the same location.
+
+## Examples
+
+### Certificate chain/private key
+
+We can pull a TLS certificate and key stored in Parameter Store and put into a local `/certs` folder. This is useful for attaching seeder as a sidecar to an Envoy container to load the certificate and key into Envoy without having Envoy pull the certificate and key from another source.
+
+In this example, `chain` is a _String_ parameter and `key` is a _SecureString_ parameter.
+
+```yaml
+apiVersion: v1alpha1
+default:
+  target:
+    path: /certs
+seeds:
+- name: chain
+  source:
+    type: ssm-parameter
+    spec:
+      name: /certificates/greeter_server/chain
+  target:
+    type: file
+    spec:
+      name: chain.pem
+- name: key
+  source:
+    type: ssm-parameter
+    spec:
+      name: /certificates/greeter_server/key
+  target:
+    type: file
+    spec:
+      name: key.pem
+```
