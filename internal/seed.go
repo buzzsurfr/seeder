@@ -23,8 +23,8 @@ func (s *Seed) Copy() (written int64, err error) {
 }
 
 func (s *Seed) Close() error {
-	source.Close()
-	target.Close()
+	s.source.Close()
+	s.target.Close()
 	s.closed = true
 }
 

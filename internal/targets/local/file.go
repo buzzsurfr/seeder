@@ -28,6 +28,6 @@ func NewFile(path, name string) *File {
 	return &File{
 		Path: path,
 		Name: name,
-		w: f
+		w:    f,
 	}
 }
