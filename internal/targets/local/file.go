@@ -1,6 +1,7 @@
 package local
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -22,6 +23,7 @@ func NewFile(path, name string) *File {
 	// Create File
 	f, createErr := os.Create(filepath.Join(path, name))
 	if createErr != nil {
+		fmt.Println("Error creating file")
 		return &File{}
 	}
 

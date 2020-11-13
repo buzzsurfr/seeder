@@ -16,12 +16,8 @@ limitations under the License.
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/buzzsurfr/seeder/internal"
-	"github.com/buzzsurfr/seeder/internal/sources/aws/ssm"
-	"github.com/buzzsurfr/seeder/internal/targets/local"
 	"github.com/spf13/cobra"
 )
 
@@ -53,21 +49,18 @@ func init() {
 }
 
 func check(cmd *cobra.Command, args []string) {
-	fmt.Println("check called")
-
 	// AWS Session
 	sess := session.Must(session.NewSessionWithOptions(session.Options{
 		SharedConfigState: session.SharedConfigEnable,
 	}))
 
 	// Load seeds from config
-	src := ssm.NewParameter(sess, "/certificates/greeter_server/chain")
-	tar := local.NewFile("/Users/salvot/Code/seeder", "chain.pem")
-	s := internal.NewSeed("test", src, tar)
+	seeds := internal.UnmarshalSeeds(sess, "seeds")
+	for _, seed := range seeds {
+		// Copy seeds from sources to targets
+		seed.Copy()
 
-	// Copy seeds from sources to targets
-	s.Copy()
-
-	// Close source and target
-	s.Close()
+		// Close source and target
+		seed.Close()
+	}
 }
