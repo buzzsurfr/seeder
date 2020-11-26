@@ -17,55 +17,66 @@ import (
 const DefaultRegion = "us-east-1"
 
 var (
-	ErrBucketNotFound    = errors.New("bucket name could not be found")
-	ErrHostnameNotFound  = errors.New("hostname could not be found")
+	// ErrBucketNotFound is an error when the S3 bucket could not be found
+	ErrBucketNotFound = errors.New("bucket name could not be found")
+	// ErrHostnameNotFound is an error where the hostname could not be found
+	ErrHostnameNotFound = errors.New("hostname could not be found")
+	// ErrInvalidS3Endpoint is an error where the S3 endpoint is an invalid URL
 	ErrInvalidS3Endpoint = errors.New("an invalid S3 endpoint URL")
 
 	// Pattern used to parse multiple path and host style S3 endpoint URLs.
 	s3URLPattern = regexp.MustCompile(`^(.+\.)?s3[.-](?:(accelerated|dualstack|website)[.-])?([a-z0-9-]+)\.`)
 )
 
-type S3URIOpt func(*S3URI)
+// URIOpt is the functional options set for a URI
+type URIOpt func(*URI)
 
-func WithScheme(s string) S3URIOpt {
-	return func(s3u *S3URI) {
-		s3u.Scheme = String(s)
+// WithScheme is a functional options to add a scheme
+func WithScheme(s string) URIOpt {
+	return func(uri *URI) {
+		uri.Scheme = String(s)
 	}
 }
 
-func WithBucket(s string) S3URIOpt {
-	return func(s3u *S3URI) {
-		s3u.Bucket = String(s)
+// WithBucket is a functional options to add a bucket
+func WithBucket(s string) URIOpt {
+	return func(uri *URI) {
+		uri.Bucket = String(s)
 	}
 }
 
-func WithKey(s string) S3URIOpt {
-	return func(s3u *S3URI) {
-		s3u.Key = String(s)
+// WithKey is a functional options to add a key
+func WithKey(s string) URIOpt {
+	return func(uri *URI) {
+		uri.Key = String(s)
 	}
 }
 
-func WithVersionID(s string) S3URIOpt {
-	return func(s3u *S3URI) {
-		s3u.VersionID = String(s)
+// WithVersionID is a functional options to add a version ID
+func WithVersionID(s string) URIOpt {
+	return func(uri *URI) {
+		uri.VersionID = String(s)
 	}
 }
 
-func WithRegion(s string) S3URIOpt {
-	return func(s3u *S3URI) {
-		s3u.Region = String(s)
+// WithRegion is a functional options to specify the region
+func WithRegion(s string) URIOpt {
+	return func(uri *URI) {
+		uri.Region = String(s)
 	}
 }
 
-func WithNormalizedKey(b bool) S3URIOpt {
-	return func(s3u *S3URI) {
-		s3u.normalize = Bool(b)
+// WithNormalizedKey is a functional options to add a normalized key
+func WithNormalizedKey(b bool) URIOpt {
+	return func(uri *URI) {
+		uri.normalize = Bool(b)
 	}
 }
 
-type S3URI struct {
+// URI is a S3 bucket/key definition based upon the S3 URI
+type URI struct {
 	uri       *url.URL
-	options   []S3URIOpt
+	options   []URIOpt
 	normalize *bool
 
 	HostStyle   *bool
@@ -81,65 +92,78 @@ type S3URI struct {
 	Region    *string
 }
 
-func NewS3URI(opts ...S3URIOpt) *S3URI {
-	return &S3URI{options: opts}
+// NewURI creates a new URI
+func NewURI(opts ...URIOpt) *URI {
+	return &URI{options: opts}
 }
 
-func (s3u *S3URI) Reset() *S3URI {
-	return reset(s3u)
+// Reset resets the URI
+func (uri *URI) Reset() *URI {
+	return reset(uri)
 }
 
-func (s3u *S3URI) Parse(v interface{}) (*S3URI, error) {
-	return parse(s3u, v)
+// Parse reads the values and transforms into a URI
+func (uri *URI) Parse(v interface{}) (*URI, error) {
+	return parse(uri, v)
 }
 
-func (s3u *S3URI) ParseURL(u *url.URL) (*S3URI, error) {
-	return parse(s3u, u)
+// ParseURL reads the URL and parses to a URI
+func (uri *URI) ParseURL(u *url.URL) (*URI, error) {
+	return parse(uri, u)
 }
 
-func (s3u *S3URI) ParseString(s string) (*S3URI, error) {
-	return parse(s3u, s)
+// ParseString reads the string and parses to a URI
+func (uri *URI) ParseString(s string) (*URI, error) {
+	return parse(uri, s)
 }
 
-func (s3u *S3URI) URI() *url.URL {
-	return s3u.uri
+// URI returns the URI as a URL
+func (uri *URI) URI() *url.URL {
+	return uri.uri
 }
 
-func Parse(v interface{}) (*S3URI, error) {
-	return NewS3URI().Parse(v)
+// Parse reads the values and transforms into a URI
+func Parse(v interface{}) (*URI, error) {
+	return NewURI().Parse(v)
 }
 
-func ParseURL(u *url.URL) (*S3URI, error) {
-	return NewS3URI().ParseURL(u)
+// ParseURL reads the URL and parses to a URI
+func ParseURL(u *url.URL) (*URI, error) {
+	return NewURI().ParseURL(u)
 }
 
-func ParseString(s string) (*S3URI, error) {
-	return NewS3URI().ParseString(s)
+// ParseString reads the string and parses to a URI
+func ParseString(s string) (*URI, error) {
+	return NewURI().ParseString(s)
 }
 
-func MustParse(s3u *S3URI, err error) *S3URI {
+// MustParse either returns the URI or panics
+func MustParse(uri *URI, err error) *URI {
 	if err != nil {
 		panic(err)
 	}
-	return s3u
+	return uri
 }
 
+// Validate specifies whether the passed arguments are a valid URI
 func Validate(v interface{}) bool {
-	_, err := NewS3URI().Parse(v)
+	_, err := NewURI().Parse(v)
 	return err == nil
 }
 
+// ValidateURL specifies whether the URL passed is a valid URI
 func ValidateURL(u *url.URL) bool {
-	_, err := NewS3URI().Parse(u)
+	_, err := NewURI().Parse(u)
 	return err == nil
 }
 
+// ValidateString specifies whether the string passed is a valid URI
 func ValidateString(s string) bool {
-	_, err := NewS3URI().Parse(s)
+	_, err := NewURI().Parse(s)
 	return err == nil
 }
 
-func parse(s3u *S3URI, s interface{}) (*S3URI, error) {
+func parse(uri *URI, s interface{}) (*URI, error) {
 	var (
 		u   *url.URL
 		err error
@@ -157,12 +181,12 @@ func parse(s3u *S3URI, s interface{}) (*S3URI, error) {
 		return nil, fmt.Errorf("unable to parse given S3 endpoint URL: %w", err)
 	}
 
-	reset(s3u)
-	s3u.uri = u
+	reset(uri)
+	uri.uri = u
 
 	switch u.Scheme {
 	case "s3", "http", "https":
-		s3u.Scheme = String(u.Scheme)
+		uri.Scheme = String(u.Scheme)
 	default:
 		return nil, fmt.Errorf("unable to parse schema type: %s", u.Scheme)
 	}
@@ -173,14 +197,14 @@ func parse(s3u *S3URI, s interface{}) (*S3URI, error) {
 		if u.Host == "" {
 			return nil, ErrBucketNotFound
 		}
-		s3u.Bucket = String(u.Host)
+		uri.Bucket = String(u.Host)
 
 		if u.Path != "" && u.Path != "/" {
-			s3u.Key = String(u.Path[1:len(u.Path)])
+			uri.Key = String(u.Path[1:len(u.Path)])
 		}
-		s3u.Region = String(DefaultRegion)
+		uri.Region = String(DefaultRegion)
 
-		return s3u, nil
+		return uri, nil
 	}
 
 	if u.Host == "" {
@@ -197,7 +221,7 @@ func parse(s3u *S3URI, s interface{}) (*S3URI, error) {
 	region := matches[3]
 
 	if prefix == "" {
-		s3u.PathStyle = Bool(true)
+		uri.PathStyle = Bool(true)
 
 		if u.Path != "" && u.Path != "/" {
 			u.Path = u.Path[1:len(u.Path)]
@@ -205,20 +229,20 @@ func parse(s3u *S3URI, s interface{}) (*S3URI, error) {
 			index := strings.Index(u.Path, "/")
 			switch {
 			case index == -1:
-				s3u.Bucket = String(u.Path)
+				uri.Bucket = String(u.Path)
 			case index == len(u.Path)-1:
-				s3u.Bucket = String(u.Path[:index])
+				uri.Bucket = String(u.Path[:index])
 			default:
-				s3u.Bucket = String(u.Path[:index])
-				s3u.Key = String(u.Path[index+1:])
+				uri.Bucket = String(u.Path[:index])
+				uri.Key = String(u.Path[index+1:])
 			}
 		}
 	} else {
-		s3u.HostStyle = Bool(true)
-		s3u.Bucket = String(prefix[:len(prefix)-1])
+		uri.HostStyle = Bool(true)
+		uri.Bucket = String(prefix[:len(prefix)-1])
 
 		if u.Path != "" && u.Path != "/" {
-			s3u.Key = String(u.Path[1:len(u.Path)])
+			uri.Key = String(u.Path[1:len(u.Path)])
 		}
 	}
 
@@ -240,14 +264,14 @@ func parse(s3u *S3URI, s interface{}) (*S3URI, error) {
 	// An S3 bucket can be either accelerated or website endpoint,
 	// but not both.
 	if usage == accelerated {
-		s3u.Accelerated = Bool(true)
+		uri.Accelerated = Bool(true)
 	} else if usage == website {
-		s3u.Website = Bool(true)
+		uri.Website = Bool(true)
 	}
 
 	// An accelerated S3 bucket can also be dualstack.
 	if usage == dualStack || region == dualStack {
-		s3u.DualStack = Bool(true)
+		uri.DualStack = Bool(true)
 	}
 
 	// Handle the special case of an accelerated dualstack S3
@@ -256,59 +280,62 @@ func parse(s3u *S3URI, s interface{}) (*S3URI, error) {
 	// As there is no way to accertain the region solely based on
 	// the S3 endpoint URL.
 	if usage != accelerated {
-		s3u.Region = String(DefaultRegion)
+		uri.Region = String(DefaultRegion)
 		if region != amazonAWS {
-			s3u.Region = String(region)
+			uri.Region = String(region)
 		}
 	}
 
 	// Query string used when requesting a particular version of a given
 	// S3 object (key).
 	if s := u.Query().Get(versionID); s != "" {
-		s3u.VersionID = String(s)
+		uri.VersionID = String(s)
 	}
 
 	// Apply options that serve as overrides after the initial parsing
 	// is completed.  This allows for bucket name, key, version ID, etc.,
 	// to be overridden at the parsing stage.
-	for _, o := range s3u.options {
-		o(s3u)
+	for _, o := range uri.options {
+		o(uri)
 	}
 
 	// Remove trailing slash from the key name, so that the "key/" will
 	// become "key" and similarly "a/complex/key/" will simply become
 	// "a/complex/key" afer being normalized.
-	if BoolValue(s3u.normalize) && s3u.Key != nil {
-		k := StringValue(s3u.Key)
+	if BoolValue(uri.normalize) && uri.Key != nil {
+		k := StringValue(uri.Key)
 		if k[len(k)-1] == '/' {
 			k = k[:len(k)-1]
 		}
-		s3u.Key = String(k)
+		uri.Key = String(k)
 	}
 
-	return s3u, nil
+	return uri, nil
 }
 
-// Reset fields in the S3URI type, and set boolean values to false.
-func reset(s3u *S3URI) *S3URI {
-	*s3u = S3URI{
+// Reset fields in the URI type, and set boolean values to false.
+func reset(uri *URI) *URI {
+	*uri = URI{
 		HostStyle:   Bool(false),
 		PathStyle:   Bool(false),
 		Accelerated: Bool(false),
 		DualStack:   Bool(false),
 		Website:     Bool(false),
 	}
-	return s3u
+	return uri
 }
 
+// String returns a pointer to the string
 func String(s string) *string {
 	return &s
 }
 
+// Bool returns a pointer to the bool
 func Bool(b bool) *bool {
 	return &b
 }
 
+// StringValue returns the value of a string pointer
 func StringValue(s *string) string {
 	if s != nil {
 		return *s
@@ -316,6 +343,7 @@ func StringValue(s *string) string {
 	return ""
 }
 
+// BoolValue returns the value of a bool pointer
 func BoolValue(b *bool) bool {
 	if b != nil {
 		return *b

@@ -31,12 +31,9 @@ var cfgFile string
 var rootCmd = &cobra.Command{
 	Use:   "seeder",
 	Short: "Certificate loader for Envoy local file hosting",
-	Long: `A longer description that spans multiple lines and likely contains
-examples and usage of using your application. For example:
+	Long: `seeder downloads configuration files for use locally. For example:
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+Download a certificate key and chain for use with Envoy.`,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	//	Run: func(cmd *cobra.Command, args []string) { },

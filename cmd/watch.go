@@ -16,9 +16,12 @@ limitations under the License.
 package cmd
 
 import (
-	"fmt"
+	"time"
 
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/buzzsurfr/seeder/internal/seed"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 // watchCmd represents the watch command
@@ -31,9 +34,7 @@ and usage of using your command. For example:
 Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("watch called")
-	},
+	Run: watch,
 }
 
 func init() {
@@ -48,4 +49,34 @@ func init() {
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 	// watchCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	watchCmd.Flags().DurationP("interval", "n", time.Hour, "wait between updates")
+	viper.BindPFlag("watch.interval", watchCmd.Flags().Lookup("interval"))
+
+}
+
+func watch(cmd *cobra.Command, args []string) {
+	// AWS Session
+	sess := session.Must(session.NewSessionWithOptions(session.Options{
+		SharedConfigState: session.SharedConfigEnable,
+	}))
+
+	// Load seeds from config
+	seeds := seed.UnmarshalSeeds(sess, "seeds")
+
+	// Timer
+	ticker := time.NewTicker(viper.GetDuration("watch.interval"))
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			for _, s := range seeds {
+				// Copy seeds from sources to targets
+				s.Copy()
+
+				// Close source and target
+				s.Close()
+			}
+		}
+	}
 }

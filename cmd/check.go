@@ -17,14 +17,14 @@ package cmd
 
 import (
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/buzzsurfr/seeder/internal"
+	"github.com/buzzsurfr/seeder/internal/seed"
 	"github.com/spf13/cobra"
 )
 
 // checkCmd represents the check command
 var checkCmd = &cobra.Command{
 	Use:   "check",
-	Short: "A brief description of your command",
+	Short: "Checks for seeds",
 	Long: `A longer description that spans multiple lines and likely contains examples
 and usage of using your command. For example:
 
@@ -55,12 +55,12 @@ func check(cmd *cobra.Command, args []string) {
 	}))
 
 	// Load seeds from config
-	seeds := internal.UnmarshalSeeds(sess, "seeds")
-	for _, seed := range seeds {
+	seeds := seed.UnmarshalSeeds(sess, "seeds")
+	for _, s := range seeds {
 		// Copy seeds from sources to targets
-		seed.Copy()
+		s.Copy()
 
 		// Close source and target
-		seed.Close()
+		s.Close()
 	}
 }
