@@ -48,26 +48,163 @@ In this example, `chain` is a _String_ parameter and `key` is a _SecureString_ p
 
 ```yaml
 apiVersion: v1alpha1
-default:
-  target:
-    path: /certs
 seeds:
 - name: chain
   source:
     type: ssm-parameter
     spec:
-      name: /certificates/greeter_server/chain
+      name: /certificates/app/chain
   target:
     type: file
     spec:
+      path: /certs
       name: chain.pem
 - name: key
   source:
     type: ssm-parameter
     spec:
-      name: /certificates/greeter_server/key
+      name: /certificates/app/key
   target:
     type: file
     spec:
+      path: /certs
       name: key.pem
+```
+
+## Use Cases
+
+### Add certificate/key to Envoy container for Amazon ECS and AWS App Mesh
+
+The first use case (which led to the creation of seeder) is for providing your own CA to enable [Transport Layer Security (TLS)](https://docs.aws.amazon.com/app-mesh/latest/userguide/tls.html) using **Local file hosting**.
+
+When creating a Virtual Node listener and enabling TLS termination using Local file hosting, you must specify the path to the **Certificate chain** and **Private key** files on the file system where the Envoy proxy is deployed. This means _inside_ the Envoy container.
+
+Seeder can be deployed as an additional sidecar (it doesn't have to be, but it's easier) that shares a volume with the Envoy container.
+
+Suppose you have the following ECS Task Definition (which is already setup to work with App Mesh):
+
+```json
+{
+    "executionRoleArn": "arn:aws:iam::{{ACCOUNT_ID}}:role/ecsTaskExecutionRole",
+    "containerDefinitions": [
+        {
+            "name": "app"
+            ...
+        },
+        {
+            "environment": [
+                {
+                    "name": "APPMESH_VIRTUAL_NODE_NAME",
+                    "value": "mesh/greeter/virtualNode/greeter-v1"
+                }
+            ],
+            "image": "840364872350.dkr.ecr.us-east-1.amazonaws.com/aws-appmesh-envoy:v1.15.0.0-prod",
+            "name": "envoy",
+        },
+    ],
+    "taskRoleArn": "arn:aws:iam::{{ACCOUNT_ID}}:role/AppMeshEnvoyTaskRole",
+    "family": "app",
+    "proxyConfiguration": {
+        "type": "APPMESH",
+        "containerName": "envoy",
+        "properties": [
+            {
+                "name": "ProxyIngressPort",
+                "value": "15000"
+            },
+            {
+                "name": "AppPorts",
+                "value": "8080"
+            },
+            {
+                "name": "EgressIgnoredIPs",
+                "value": "169.254.170.2,169.254.169.254"
+            },
+            {
+                "name": "IgnoredGID",
+                "value": ""
+            },
+            {
+                "name": "EgressIgnoredPorts",
+                "value": ""
+            },
+            {
+                "name": "IgnoredUID",
+                "value": "1337"
+            },
+            {
+                "name": "ProxyEgressPort",
+                "value": "15001"
+            }
+        ]
+    }
+}
+```
+
+Add `seeder` to the task definition and make envoy share a volume and be dependent on the seeder container.
+
+```json
+{
+    "executionRoleArn": "arn:aws:iam::{{ACCOUNT_ID}}:role/ecsTaskExecutionRole",
+    "containerDefinitions": [
+        {
+            "name": "app"
+            ...
+        },
+        {
+            "mountPoints": [
+                {
+                    "sourceVolume": "certificates",
+                    "containerPath": "/certs",
+                    "readOnly": true
+                }
+            ],
+            "image": "840364872350.dkr.ecr.us-east-1.amazonaws.com/aws-appmesh-envoy:v1.15.0.0-prod",
+            "dependsOn": [
+                {
+                    "containerName": "seeder",
+                    "condition": "COMPLETE"
+                }
+            ],
+            "name": "envoy",
+        },
+        {
+            "name": "seeder",
+            "image": "buzzsurfr/seeder:v0.1.0",
+            "memoryReservation": "16",
+            "essential": false,
+            "environment": [
+                {
+                    "name": "CHAIN_S3URI",
+                    "value": "s3://mycertificates/greeter_server/chain.pem"
+                },
+                {
+                    "name": "KEY_S3URI",
+                    "value": "s3://mycertificates/greeter_server/key.pem"
+                },
+                {
+                    "name": "OUTPUT_DIR",
+                    "value": "/tmp/certificates"
+                }
+            ],
+            "user": "1337",
+            "mountPoints": [
+                {
+                    "sourceVolume": "certificates",
+                    "containerPath": "/tmp/certificates",
+                    "readOnly": ""
+                }
+            ]
+        }
+    ],
+    "taskRoleArn": "arn:aws:iam::{{ACCOUNT_ID}}:role/AppMeshEnvoyTaskRole",
+    "family": "app",
+    "proxyConfiguration": ...,
+    "volumes": [
+        {
+            "host": {},
+            "name": "certificates"
+        }
+    ]
+}
 ```

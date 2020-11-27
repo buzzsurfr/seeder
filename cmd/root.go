@@ -18,6 +18,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -85,6 +86,8 @@ func initConfig() {
 	// Defaults
 	viper.SetTypeByDefaultValue(true)
 	viper.SetDefault("default.target.path", "/var/seeder")
+	viper.SetEnvPrefix("SEEDER")
+	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 
 	viper.AutomaticEnv() // read in environment variables that match
 
