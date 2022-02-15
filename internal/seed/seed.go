@@ -5,6 +5,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/buzzsurfr/seeder/internal"
+	"github.com/buzzsurfr/seeder/internal/sources/aws/secretsmanager"
 	"github.com/buzzsurfr/seeder/internal/sources/aws/ssm"
 	"github.com/buzzsurfr/seeder/internal/targets/local"
 	"github.com/spf13/viper"
@@ -59,6 +60,9 @@ func UnmarshalSeeds(sess *session.Session, key string) Seeds {
 		case "ssm-parameter":
 			spec := sourceConfig["spec"].(map[interface{}]interface{})
 			source = ssm.NewParameter(sess, spec["name"].(string))
+		case "secretsmanager":
+			spec := sourceConfig["spec"].(map[interface{}]interface{})
+			source = secretsmanager.NewSecret(sess, spec["secretId"].(string))
 		}
 
 		// Target

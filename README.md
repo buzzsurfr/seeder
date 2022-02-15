@@ -7,6 +7,7 @@ The basic unit of seeder is a **seed**, which contains a source and target, then
 
 seeder supports the following sources:
 * [AWS Systems Manager Parameter Store](#aws-systems-manager-parameter-store)
+* [AWS Secrets Manager](#aws-secrets-manager)
 * [Amazon S3](#amazon-s3)
 
 ### AWS Systems Manager Parameter Store
@@ -20,6 +21,18 @@ If the parameter is stored as a _SecureString_ (encrypted), it will be decrypted
 Parameter seeds require the `ssm:GetParameter` permission, optionally specifying the parameter ARN as a resource.
 
 If the parameter is stored as a _SecureString_ (encrypted), then you must also have the `kms:Decrypt` permission for the key used by the parameter, optionally specifying the key ARN as a resource. If you do not have the IAM permissions, you can optionally add the IAM user/role for seeder to the key policy for the key.
+
+### AWS Secrets Manager
+
+Seeds can be loaded from secrets stored in AWS Secrets Manager by specifying the name of the secret ID.
+
+Currently, only supports strings, not blobs.
+
+#### Permissions
+
+Secret seeds require the `secretsmanager:GetSecretValue` permission, optionally specifying resource types or condition keys.
+
+If the secret is encrypted using a customer-managed key instead of the AWS managed key `aws/secretsmanager`, then you also need `kms:Decrypt` permissions for that key.
 
 ### Amazon S3
 
